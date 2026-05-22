@@ -48,6 +48,22 @@ def _child_tries_lock(lock_path: str, result_queue: multiprocessing.Queue) -> No
         result_queue.put(f"error:{exc}")
 
 
+def _child_waits_for_lock(
+    lock_path: str,
+    ready_event: multiprocessing.Event,
+    result_queue: multiprocessing.Queue,
+) -> None:
+    from superlocalmemory.core import file_lock as fl
+    ready_event.set()
+    try:
+        with fl.exclusive_lock(Path(lock_path), timeout_s=2.0):
+            result_queue.put("acquired")
+    except fl.LockHeldError:
+        result_queue.put("held")
+    except Exception as exc:
+        result_queue.put(f"error:{exc}")
+
+
 def test_second_process_cannot_acquire(tmp_path: Path) -> None:
     fl = _imports()
     lock_file = tmp_path / "d.lock"
@@ -66,6 +82,29 @@ def test_second_process_cannot_acquire(tmp_path: Path) -> None:
         )
         result = q.get(timeout=2.0)
     assert result == "held", f"Expected 'held', got {result}"
+
+
+def test_second_process_waits_until_lock_is_released(tmp_path: Path) -> None:
+    fl = _imports()
+    lock_file = tmp_path / "d.lock"
+    ctx = multiprocessing.get_context("spawn")
+    _JOIN_TIMEOUT = 30.0
+    with fl.exclusive_lock(lock_file):
+        q: multiprocessing.Queue = ctx.Queue()
+        ready = ctx.Event()
+        p = ctx.Process(
+            target=_child_waits_for_lock,
+            args=(str(lock_file), ready, q),
+        )
+        p.start()
+        assert ready.wait(timeout=_JOIN_TIMEOUT), "Child did not start lock attempt"
+        time.sleep(0.2)
+    p.join(timeout=_JOIN_TIMEOUT)
+    assert p.exitcode == 0, (
+        f"Child process did not finish within {_JOIN_TIMEOUT}s "
+        f"(exitcode={p.exitcode}). CI cold-start too slow?"
+    )
+    assert q.get(timeout=2.0) == "acquired"
 
 
 def test_released_lock_allows_second_process(tmp_path: Path) -> None:
