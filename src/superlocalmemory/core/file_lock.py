@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -62,13 +63,19 @@ def exclusive_lock(path: Path, timeout_s: float = 0.0) -> Iterator[int]:
         if _HAS_PORTALOCKER:
             fd = os.open(str(path), os.O_RDWR | os.O_CREAT, 0o600)
             try:
-                try:
-                    portalocker.lock(
-                        fd, portalocker.LOCK_EX | portalocker.LOCK_NB,
-                    )
-                except portalocker.LockException as exc:
-                    os.close(fd)
-                    raise LockHeldError(f"{path} is locked") from exc
+                deadline = time.monotonic() + max(0.0, timeout_s)
+                while True:
+                    try:
+                        portalocker.lock(
+                            fd, portalocker.LOCK_EX | portalocker.LOCK_NB,
+                        )
+                        break
+                    except portalocker.LockException as exc:
+                        if timeout_s <= 0.0 or time.monotonic() >= deadline:
+                            os.close(fd)
+                            raise LockHeldError(f"{path} is locked") from exc
+                        remaining = max(0.0, deadline - time.monotonic())
+                        time.sleep(min(0.05, remaining))
                 try:
                     yield fd
                 finally:
