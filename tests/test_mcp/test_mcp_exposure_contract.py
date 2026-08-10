@@ -119,12 +119,11 @@ def _register_every_tool(target) -> None:
 @pytest.mark.parametrize(
     ("exposure", "profile", "expected_count"),
     (
-        # essential stays 42 to match the full42 profile name (user-facing
-        # config contract + published tool-count table). prestage_context is
-        # registered but reaches users through `whole`, which is why whole is 87.
-        ("essential", "", 42),
-        ("named-core", "core", 14),
-        ("whole", "whole", 87),
+        # Local manual fact-type management adds one tool to every memory
+        # profile and to the raw whole surface.
+        ("essential", "", 43),
+        ("named-core", "core", 15),
+        ("whole", "whole", 88),
     ),
 )
 def test_registration_exposure_is_exact_and_duplicate_free(
@@ -235,14 +234,14 @@ async def test_attribution_reports_current_product_identity(
 def test_imported_server_exposes_product_name_and_whole_count(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Imported MCP server keeps product identity and whole surface at 87."""
+    """Imported MCP server keeps product identity and whole surface at 88."""
     mod = _fresh_server(monkeypatch, "whole")
     # Public SLMFastMCP/MCPServer attribute — do not assert private internals.
     assert mod.server.name == "SuperLocalMemory V4"
     strict = _StrictToolServer()
     _register_every_tool(strict)
-    assert len(strict.tools) == 87
+    assert len(strict.tools) == 88
     actual_names = [tool.name for tool in mod.server._tool_manager.list_tools()]
-    assert len(actual_names) == 87
+    assert len(actual_names) == 88
     assert len(actual_names) == len(set(actual_names))
     assert set(actual_names) == set(strict.tools)

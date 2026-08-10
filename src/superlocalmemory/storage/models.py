@@ -32,6 +32,29 @@ class FactType(str, Enum):
     TEMPORAL = "temporal"      # Time-bounded events with intervals
 
 
+VALID_FACT_TYPES = frozenset(fact_type.value for fact_type in FactType)
+
+
+def parse_fact_type(value: Any, *, allow_empty: bool = True) -> FactType | None:
+    """Normalize a user-supplied fact type and reject unsupported values."""
+    if value is None:
+        if allow_empty:
+            return None
+        raise ValueError("fact_type is required")
+    normalized = str(value).strip().lower()
+    if not normalized:
+        if allow_empty:
+            return None
+        raise ValueError("fact_type is required")
+    try:
+        return FactType(normalized)
+    except ValueError as exc:
+        valid = ", ".join(sorted(VALID_FACT_TYPES))
+        raise ValueError(
+            f"invalid fact_type {value!r}; expected one of: {valid}"
+        ) from exc
+
+
 class EdgeType(str, Enum):
     """Knowledge graph edge types."""
 

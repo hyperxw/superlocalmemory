@@ -152,7 +152,12 @@ def build_immediate_admission_handler(
 
         from superlocalmemory.core.ingest_gate import apply_ingest_gate
         from superlocalmemory.core.ingest_policy import scrub_secrets_for_ingest
-        from superlocalmemory.storage.models import AtomicFact, FactType, MemoryRecord
+        from superlocalmemory.storage.models import (
+            AtomicFact,
+            FactType,
+            MemoryRecord,
+            parse_fact_type,
+        )
 
         # Secrets are ALWAYS scrubbed at this shared queryable-write chokepoint,
         # which both the canonical HTTP /remember runtime and the canonical_store
@@ -180,6 +185,7 @@ def build_immediate_admission_handler(
         now = datetime.now(UTC).isoformat()
         observation_date = request.session_date or now[:10]
 
+        requested_fact_type = parse_fact_type(metadata.get("fact_type"))
         prebuilt_payload = metadata.get(_PREBUILT_FACT_KEY)
         if isinstance(prebuilt_payload, dict):
             fact = _prebuilt_fact_from_payload(prebuilt_payload)
@@ -204,7 +210,7 @@ def build_immediate_admission_handler(
                 scope=request.scope,
                 shared_with=list(request.shared_with) or None,
                 content=fact_content,
-                fact_type=FactType.EPISODIC,
+                fact_type=requested_fact_type or FactType.EPISODIC,
                 entities=entities,
                 observation_date=observation_date,
                 session_id=request.session_id,

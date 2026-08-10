@@ -25,6 +25,7 @@ from superlocalmemory.core.operation_request import OperationKind
 from superlocalmemory.infra.data_root import state_path
 from superlocalmemory.mcp._daemon_proxy import daemon_unavailable_error
 from superlocalmemory.mcp.shared import authorize_mcp_mutation
+from superlocalmemory.storage.models import parse_fact_type
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def register_core_tools(server, get_engine: Callable) -> None:
     async def remember(
         content: str, tags: str = "", project: str = "",
         importance: int = 5, session_id: str = "",
-        agent_id: str = "mcp_client",
+        agent_id: str = "mcp_client", fact_type: str = "",
         scope: str | None = None,
         shared_with: str = "",
         idempotency_key: str = "",
@@ -87,12 +88,18 @@ def register_core_tools(server, get_engine: Callable) -> None:
         if agent_id == "mcp_client":
             from superlocalmemory.mcp.agent_context import get_current_agent_id
             agent_id = get_current_agent_id()
+        try:
+            requested_fact_type = parse_fact_type(fact_type)
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
         meta = {
             "project": project,
             "importance": importance,
             "agent_id": agent_id,
             "session_id": session_id,
         }
+        if requested_fact_type is not None:
+            meta["fact_type"] = requested_fact_type.value
         effective_idempotency_key = idempotency_key
         if not effective_idempotency_key:
             # Derive a stable key before the first attempt so every retry of
@@ -103,18 +110,25 @@ def register_core_tools(server, get_engine: Callable) -> None:
             # same content, agent, and scope are deduplicated across retries.
             if session_id:
                 material = (
-                    f"{agent_id}\0{session_id}\0{scope or ''}\0{shared_with}\0{content}"
+                    f"{agent_id}\0{session_id}\0{scope or ''}\0{shared_with}\0"
+                    f"{requested_fact_type.value if requested_fact_type else ''}\0{content}"
                 )
                 effective_idempotency_key = "mcp:" + hashlib.sha256(
                     material.encode("utf-8")
                 ).hexdigest()
             else:
-                material = f"{agent_id}\0{scope or ''}\0{shared_with}\0{content}"
+                material = (
+                    f"{agent_id}\0{scope or ''}\0{shared_with}\0"
+                    f"{requested_fact_type.value if requested_fact_type else ''}\0{content}"
+                )
                 effective_idempotency_key = "mcp:req:" + hashlib.sha256(
                     material.encode("utf-8")
                 ).hexdigest()
         # Parse shared_with from comma-separated string
-        _shared_list = [s.strip() for s in shared_with.split(",") if s.strip()] if shared_with else None
+        _shared_list = (
+            [s.strip() for s in shared_with.split(",") if s.strip()]
+            if shared_with else None
+        )
         # v3.5.5 WRITE-THROUGH: route through the daemon's /remember, which does
         # a synchronous verbatim insert (memory is keyword/BM25-recallable the
         # instant this returns) and enqueues async enrichment. This closes the
@@ -932,6 +946,51 @@ def register_core_tools(server, get_engine: Callable) -> None:
             return {"success": False, "error": result.get("error", "Update failed")}
         except Exception as exc:
             logger.exception("update_memory failed")
+            return {"success": False, "error": str(exc)}
+
+    @server.tool(annotations=ToolAnnotations(idempotentHint=True))
+    @admits(OperationKind.CORRECT)
+    async def update_fact_type(
+        fact_id: str, fact_type: str, agent_id: str = "mcp_client",
+    ) -> dict:
+        """Update one memory fact's classification by exact fact ID."""
+        if agent_id == "mcp_client":
+            from superlocalmemory.mcp.agent_context import get_current_agent_id
+            agent_id = get_current_agent_id()
+        try:
+            parsed = parse_fact_type(fact_type, allow_empty=False)
+            import asyncio
+            import urllib.parse
+
+            from superlocalmemory.cli.daemon import daemon_request, is_daemon_running
+
+            if await asyncio.to_thread(is_daemon_running):
+                path = (
+                    "/api/memories/"
+                    + urllib.parse.quote(fact_id, safe="")
+                    + "/fact-type"
+                )
+                result = await asyncio.to_thread(
+                    daemon_request, "PATCH", path, {"fact_type": parsed.value},
+                )
+                if isinstance(result, dict) and result.get("success"):
+                    return result
+                return {
+                    "success": False,
+                    "retryable": True,
+                    "error": "resident daemon rejected the fact_type update",
+                }
+
+            from superlocalmemory.core.worker_pool import WorkerPool
+
+            result = WorkerPool.shared().update_fact_type(
+                fact_id, parsed.value, agent_id,
+            )
+            if result.get("ok"):
+                return {"success": True, **result}
+            return {"success": False, "error": result.get("error", "Update failed")}
+        except Exception as exc:
+            logger.exception("update_fact_type failed")
             return {"success": False, "error": str(exc)}
 
     @server.tool(annotations=ToolAnnotations(readOnlyHint=True))

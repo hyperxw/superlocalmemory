@@ -69,6 +69,7 @@ DESTRUCTIVE_TOOLS: set[str] = {
 IDEMPOTENT_TOOLS: set[str] = {
     # same update applied twice = same state
     "update_memory",
+    "update_fact_type",
 }
 
 NON_IDEMPOTENT_MUTATIONS: set[str] = {
@@ -149,7 +150,7 @@ def test_write_tools_do_not_claim_readOnlyHint(tools: dict[str, object]) -> None
     None (unset) is OK; True is a lie.
     """
     write_tools = {
-        "remember", "delete_memory", "update_memory",
+        "remember", "delete_memory", "update_memory", "update_fact_type",
         # session_init excluded: verified read-only in tools_active.py — it recalls
         # (pool_recall + get_pinned SELECT) and returns an in-memory session_id with no
         # DB writes, the same read-only class as recall/search. It exposes no scope-

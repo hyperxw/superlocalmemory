@@ -65,8 +65,14 @@ class TestToolRegistration:
         )
         # Verify key tools are present
         for name in ("remember", "recall", "search", "fetch", "get_status",
-                     "get_attribution", "list_recent"):
+                     "get_attribution", "list_recent", "update_fact_type"):
             assert name in srv._tools, f"Missing core tool: {name}"
+
+    def test_update_fact_type_is_in_default_essential_tools(self):
+        """Default MCP mode exposes the local fact classification tool."""
+        from superlocalmemory.mcp import server
+
+        assert "update_fact_type" in server._ESSENTIAL_TOOLS
 
     def test_active_tools_registers_expected_count(self):
         """register_active_tools registers the 4 active tools on the server.

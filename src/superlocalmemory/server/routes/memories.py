@@ -1217,6 +1217,43 @@ async def edit_memory(request: Request, fact_id: str):
         raise _canonical_mutation_error(exc, "Edit error")
 
 
+@router.patch("/api/memories/{fact_id}/fact-type")
+async def edit_memory_fact_type(request: Request, fact_id: str):
+    """Edit the classification of a specific atomic fact."""
+    try:
+        body = await request.json()
+        from superlocalmemory.storage.models import parse_fact_type
+
+        parsed = parse_fact_type(body.get("fact_type"), allow_empty=False)
+        engine, _active_profile, hook_context = _authorize_memory_mutation(
+            request,
+            "update",
+            fact_id,
+            content_preview=f"fact_type={parsed.value}",
+            run_pre_hook=False,
+        )
+        from superlocalmemory.core.mutations import update_fact_type_authorized
+
+        result = update_fact_type_authorized(
+            engine,
+            fact_id,
+            parsed.value,
+            trusted_actor_id=hook_context["agent_id"],
+            source_agent_id="dashboard",
+            canonical_runtime=_canonical_mutation_runtime(request),
+            idempotency_key=_mutation_idempotency_key(request),
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail="Memory not found")
+        return {"success": True, **result}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _canonical_mutation_error(exc, "Fact type edit error")
+
+
 _VALID_SCOPES = ("personal", "shared", "global")
 
 

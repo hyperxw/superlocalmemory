@@ -48,11 +48,12 @@ def test_profile_definitions_keys_exact():
 
 
 # ---------------------------------------------------------------------------
-# RED-2: core == exactly the 14 names in LLD §5
+# RED-2: core plus local manual fact-type management (15 tools)
 # ---------------------------------------------------------------------------
 
 _EXPECTED_CORE = frozenset({
-    "remember", "recall", "search", "fetch", "list_recent", "update_memory", "forget",
+    "remember", "recall", "search", "fetch", "list_recent",
+    "update_memory", "update_fact_type", "forget",
     "session_init", "close_session",
     "slm_compress", "slm_retrieve", "slm_cache_set", "slm_cache_get", "slm_optimize_stats",
 })
@@ -64,11 +65,11 @@ def test_profile_core_exact():
     assert core == _EXPECTED_CORE, (
         f"core diff — extra: {core - _EXPECTED_CORE}, missing: {_EXPECTED_CORE - core}"
     )
-    assert len(core) == 14, f"core must be 14 names, got {len(core)}"
+    assert len(core) == 15, f"core must be 15 names, got {len(core)}"
 
 
 # ---------------------------------------------------------------------------
-# RED-3: code == core | code-graph + switch_profile + 3 loop tools (==24)
+# RED-3: code == core | code-graph + switch_profile + 3 loop tools (==25)
 # ---------------------------------------------------------------------------
 
 _CODE_EXTRA = frozenset({
@@ -88,11 +89,11 @@ def test_profile_code_exact():
     assert code == expected, (
         f"code diff — extra: {code - expected}, missing: {expected - code}"
     )
-    assert len(code) == 24, f"code must be 24 names, got {len(code)}"
+    assert len(code) == 25, f"code must be 25 names, got {len(code)}"
 
 
 # ---------------------------------------------------------------------------
-# RED-4: full == 42 and ⊇ core memory names; built from explicit 34+8 literal
+# RED-4: full == 43 and contains the local manual fact-type tool
 # ---------------------------------------------------------------------------
 
 _EXPECTED_FULL_MESH = frozenset({
@@ -102,7 +103,7 @@ _EXPECTED_FULL_MESH = frozenset({
 
 _EXPECTED_FULL_BASE = frozenset({
     "remember", "recall", "search", "fetch", "list_recent", "delete_memory",
-    "update_memory", "get_status", "session_init", "observe", "close_session",
+    "update_memory", "update_fact_type", "get_status", "session_init", "observe", "close_session",
     "report_feedback", "forget", "run_maintenance", "consolidate_cognitive",
     "get_soft_prompts", "set_mode", "report_outcome", "log_tool_event",
     "get_assertions", "reinforce_assertion", "contradict_assertion",
@@ -110,9 +111,7 @@ _EXPECTED_FULL_BASE = frozenset({
     "slm_compress", "slm_retrieve", "slm_cache_set", "slm_cache_get", "slm_optimize_stats",
     # 3.8.0: bounded-loop tools (CLI + command + MCP).
     "slm_loop_run", "slm_loop_history", "slm_loop_show",
-    # v4: prestage_context is registered but intentionally NOT in full/power —
-    # the profile names encode the counts (full42/power54) and the published
-    # tool-count table depends on them. It reaches users via `whole`.
+    # prestage_context remains intentionally absent and reaches users via whole.
 })
 
 _EXPECTED_FULL = _EXPECTED_FULL_BASE | _EXPECTED_FULL_MESH
@@ -124,7 +123,7 @@ def test_profile_full_exact():
     assert full == _EXPECTED_FULL, (
         f"full diff — extra: {full - _EXPECTED_FULL}, missing: {_EXPECTED_FULL - full}"
     )
-    assert len(full) == 42, f"full must be 42 names, got {len(full)}"
+    assert len(full) == 43, f"full must be 43 names, got {len(full)}"
     # Must ⊇ core memory names
     core = mod._PROFILE_DEFINITIONS["core"]
     assert core <= full, f"full must be a superset of core; missing from full: {core - full}"
@@ -149,7 +148,7 @@ def test_profile_power_exact():
     assert power == _EXPECTED_POWER, (
         f"power diff — extra: {power - _EXPECTED_POWER}, missing: {_EXPECTED_POWER - power}"
     )
-    assert len(power) == 54, f"power must be 54 names, got {len(power)}"
+    assert len(power) == 55, f"power must be 55 names, got {len(power)}"
     full = mod._PROFILE_DEFINITIONS["full"]
     assert full <= power, f"power must be a superset of full; missing: {full - power}"
 

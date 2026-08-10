@@ -70,7 +70,7 @@ SuperLocalMemory V4 combines conventional dense and lexical retrieval with graph
 - **Modes A / B / C** — local-only (A), on-device LLM enrichment (B), provider-assisted (C). An operating mode records technical locality facts; it does **not** determine EU AI Act legal compliance (that is deployment-context assessment — see [Privacy controls](#privacy-controls-and-operating-modes)).
 - **GDPR posture, retention & audit chain** — export, fail-closed cross-store erasure, retention policies, and a hash-chained audit trail. Engineering controls for compliance programs, not a legal certification.
 - **7-layer retrieval/recall stack & code graph** — multi-channel candidates (semantic, BM25, temporal, Hopfield, spreading activation) plus optional code-graph tools for blast radius and review context.
-- **MCP profiles** — `full` exposes **42** tools (default everyday surface); `power` **54**; `whole` **87** (all registered). Also `core` (14), `code` (24), and `mesh` (8).
+- **MCP profiles** — this local build exposes `full` **43** tools, `power` **55**, and `whole` **88** after adding manual fact-type management. Also `core` (15), `code` (25), and `mesh` (8).
 - **Governed write path & verifiable transactions** — admission + policy control, a per-owner obligation ledger, and a hash-sealed completion manifest with a reconciler that redrives unmet obligations.
 - **Self-healing lifecycle & admin remediation** — stale locks cleared on restart; list/resolve stuck operations from CLI, MCP, or the dashboard.
 
@@ -423,7 +423,7 @@ Control tool surface via `SLM_MCP_PROFILE`:
 | `mesh` | 8 | SLM-Mesh only — multi-session / multi-machine coordination |
 | `full` | 42 | Memory + optimize + evolution + mesh + bounded loops |
 | `power` | 54 | Full + administration, lifecycle, and diagnostics |
-| `whole` | 87 | Every registered MCP tool |
+| `whole` | 88 | Every registered MCP tool |
 
 **Precedence:** `ALL` > `TOOLS` > `PROFILE` > `default`
 
@@ -434,7 +434,7 @@ slm mcp
 
 For a predictable small surface, set `core` explicitly. Leaving the variable
 unset retains the compatibility default, whose mesh tools follow the local
-mesh setting. Count-suffixed aliases remain for backward compatibility and emit a migration warning: `core14`, `code20`, `code21`, `code24`, `mesh8`, `full38`, `full39`, `full42`, `power50`, `power51`, `power54`, `whole81`, `whole84`. Unknown names stop startup instead of silently selecting another tool set.
+mesh setting. Count-suffixed aliases remain for backward compatibility and emit a migration warning; this local build also accepts `core15`, `code25`, `full43`, `power55`, and `whole88`. Unknown names stop startup instead of silently selecting another tool set.
 
 Per-IDE configs available for Claude Code, Cursor, Windsurf, VS Code Copilot, Continue, Gemini CLI, JetBrains, Zed, and more (15 configs in `ide/configs/`). See [docs/ide-setup.md](docs/ide-setup.md).
 

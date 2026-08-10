@@ -32,20 +32,17 @@ def _load_server():
 def test_prestage_context_absent_from_counted_profiles():
     """prestage_context is registered but must NOT grow the counted profiles.
 
-    The profile names encode their sizes (``full42``, ``power54``) and are a
-    user-facing config contract (``SLM_MCP_PROFILE=full42``); the published
-    tool-count table depends on them. Adding a tool to these sets would make
-    ``full42`` serve 43 tools. Reachability is covered by
-    ``test_prestage_context_registered_on_server``.
+    The local manual fact-type tool advances the counted memory profiles by
+    one, while prestage_context remains reachable only through ``whole``.
     """
     mod = _load_server()
     assert "prestage_context" not in mod._ESSENTIAL_TOOLS
     assert "prestage_context" not in mod._PROFILE_DEFINITIONS["full"]
     assert "prestage_context" not in mod._PROFILE_DEFINITIONS["power"]
     # The contract these guard: sizes must match the profile names.
-    assert len(mod._ESSENTIAL_TOOLS) == 42
-    assert len(mod._PROFILE_DEFINITIONS["full"]) == 42
-    assert len(mod._PROFILE_DEFINITIONS["power"]) == 54
+    assert len(mod._ESSENTIAL_TOOLS) == 43
+    assert len(mod._PROFILE_DEFINITIONS["full"]) == 43
+    assert len(mod._PROFILE_DEFINITIONS["power"]) == 55
 
 
 def test_prestage_context_registered_on_server():

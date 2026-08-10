@@ -106,6 +106,10 @@ def test_fact_delete_and_edit_delegate_to_canonical_mutation_service() -> None:
     assert "update_fact_authorized" in edit_block
     assert "UPDATE atomic_facts SET content" not in edit_block
 
+    type_block = _function_block(source, "edit_memory_fact_type")
+    assert "update_fact_type_authorized" in type_block
+    assert "UPDATE atomic_facts SET fact_type" not in type_block
+
 
 def test_dashboard_lifecycle_mutations_have_no_route_owned_writer() -> None:
     """Delete, archive, merge, update, and scope share the daemon coordinator."""
@@ -117,6 +121,7 @@ def test_dashboard_lifecycle_mutations_have_no_route_owned_writer() -> None:
         "forget_memory",
         "merge_memory",
         "edit_memory",
+        "edit_memory_fact_type",
         "set_memory_scope",
     ):
         block = _function_block(source, function_name)

@@ -555,4 +555,65 @@ def update_fact_authorized(
     return {"ok": True, "fact_id": fact_id, "content": content}
 
 
-__all__ = ["delete_fact_authorized", "update_fact_authorized"]
+def update_fact_type_authorized(
+    engine: Any,
+    fact_id: str,
+    fact_type: str,
+    *,
+    trusted_actor_id: str,
+    source_agent_id: str,
+    canonical_runtime: Any | None = None,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    """Authorize and persist one exact fact classification change."""
+    from superlocalmemory.storage.models import parse_fact_type
+
+    parsed = parse_fact_type(fact_type, allow_empty=False)
+    profile_id, context = _context(
+        engine,
+        "update",
+        fact_id,
+        trusted_actor_id=trusted_actor_id,
+        source_agent_id=source_agent_id,
+        content_preview=f"fact_type={parsed.value}",
+    )
+    rows = engine._db.execute(
+        "SELECT fact_type FROM atomic_facts "
+        "WHERE fact_id = ? AND profile_id = ? LIMIT 1",
+        (fact_id, profile_id),
+    )
+    if not rows:
+        return {"ok": False, "error": f"Memory {fact_id} not found"}
+    old_fact_type = str(dict(rows[0]).get("fact_type") or "")
+    updates = {"fact_type": parsed.value}
+    if canonical_runtime is not None:
+        result = dict(canonical_runtime.update_fact(
+            profile_id,
+            fact_id,
+            updates,
+            idempotency_key=idempotency_key,
+        ))
+        if not result.get("ok"):
+            return {"ok": False, "error": f"Memory {fact_id} not found"}
+    else:
+        engine._db.update_fact(fact_id, updates, profile_id=profile_id)
+
+    engine._hooks.run_post("update", context)
+    logger.info(
+        "UPDATE_FACT_TYPE fact_id=%s actor=%s source_agent=%s old=%s new=%s",
+        fact_id[:16], trusted_actor_id, source_agent_id,
+        old_fact_type, parsed.value,
+    )
+    return {
+        "ok": True,
+        "fact_id": fact_id,
+        "old_fact_type": old_fact_type,
+        "fact_type": parsed.value,
+    }
+
+
+__all__ = [
+    "delete_fact_authorized",
+    "update_fact_authorized",
+    "update_fact_type_authorized",
+]

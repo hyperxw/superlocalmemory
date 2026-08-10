@@ -19,10 +19,10 @@ from superlocalmemory.server.unified_daemon import create_app
 _ENDPOINT = "/api/v3/mcp/profiles"
 
 _EXPECTED_COUNTS = {
-    "core": 14,
-    "code": 24,   # v3.8.0: +3 bounded-loop tools
-    "full": 42,   # profile name encodes the count (full42) — do not grow
-    "power": 54,  # profile name encodes the count (power54) — do not grow
+    "core": 15,
+    "code": 25,
+    "full": 43,
+    "power": 55,
     "mesh": 8,
 }
 

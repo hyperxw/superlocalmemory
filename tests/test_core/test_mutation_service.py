@@ -95,3 +95,49 @@ def test_authorized_update_refreshes_indexes_after_trust_gate() -> None:
     )
     bm25.update_fact.assert_called_once_with("fact-1", "new content", "default")
     engine._hooks.run_post.assert_called_once()
+
+
+def test_authorized_fact_type_update_is_profile_scoped_and_audited() -> None:
+    from superlocalmemory.core.mutations import update_fact_type_authorized
+
+    engine = _engine()
+    engine._db.execute.return_value = [{"fact_type": "semantic"}]
+
+    result = update_fact_type_authorized(
+        engine,
+        "fact-1",
+        "OPINION",
+        trusted_actor_id="trusted:mcp",
+        source_agent_id="mcp-client",
+    )
+
+    assert result == {
+        "ok": True,
+        "fact_id": "fact-1",
+        "old_fact_type": "semantic",
+        "fact_type": "opinion",
+    }
+    engine._db.update_fact.assert_called_once_with(
+        "fact-1", {"fact_type": "opinion"}, profile_id="default",
+    )
+    assert engine._hooks.run_pre.call_args.args[0] == "update"
+    engine._hooks.run_post.assert_called_once()
+
+
+def test_authorized_fact_type_update_rejects_invalid_type() -> None:
+    from superlocalmemory.core.mutations import update_fact_type_authorized
+
+    engine = _engine()
+
+    try:
+        update_fact_type_authorized(
+            engine,
+            "fact-1",
+            "not-a-type",
+            trusted_actor_id="trusted:mcp",
+            source_agent_id="mcp-client",
+        )
+    except ValueError as exc:
+        assert "invalid fact_type" in str(exc)
+    else:
+        raise AssertionError("invalid fact_type was accepted")

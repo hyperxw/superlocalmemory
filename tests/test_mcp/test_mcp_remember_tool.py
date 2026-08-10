@@ -199,6 +199,36 @@ class TestRememberTool:
         assert metadata["project"] == "qclaw"
         assert metadata["importance"] == 9
 
+    def test_remember_forwards_explicit_fact_type(self):
+        """A caller-selected classification survives canonical admission metadata."""
+        remember = _get_remember_tool()
+        pool = MagicMock()
+        pool.store.return_value = {
+            "ok": True,
+            "fact_ids": ["fact-opinion"],
+            "count": 1,
+        }
+
+        with patch(
+            "superlocalmemory.mcp._daemon_proxy.choose_pool",
+            return_value=pool,
+        ):
+            result = asyncio.run(remember(
+                "I prefer explicit type control for durable memories",
+                fact_type="OPINION",
+            ))
+
+        assert result["success"] is True
+        assert pool.store.call_args.args[1]["fact_type"] == "opinion"
+
+    def test_remember_rejects_invalid_fact_type(self):
+        remember = _get_remember_tool()
+
+        result = asyncio.run(remember("typed fact", fact_type="unsupported"))
+
+        assert result["success"] is False
+        assert "invalid fact_type" in result["error"]
+
 
 # ---------------------------------------------------------------------------
 # Tests: edge cases

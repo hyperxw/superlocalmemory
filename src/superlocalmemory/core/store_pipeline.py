@@ -27,6 +27,7 @@ from superlocalmemory.storage.models import (
     AtomicFact,
     FactType,
     MemoryRecord,
+    parse_fact_type,
 )
 
 logger = logging.getLogger(__name__)
@@ -443,6 +444,8 @@ def run_store(
     if not pre_authorized:
         hooks.run_pre("store", hook_ctx)
 
+    requested_fact_type = parse_fact_type((metadata or {}).get("fact_type"))
+
     # Admission gates apply to FRESH submissions only. A materialization pass
     # re-runs this pipeline for content whose queryable projection was already
     # committed at submit (``queryable_fact_ids`` is set). Re-applying admission
@@ -586,7 +589,7 @@ def run_store(
         verbatim = AtomicFact(
             fact_id=uuid.uuid4().hex[:16],
             content=_verbatim_text,
-            fact_type=FactType.EPISODIC,
+            fact_type=requested_fact_type or FactType.EPISODIC,
             entities=_verbatim_entities,
             session_id=session_id,
             observation_date=parsed_date,
@@ -621,7 +624,7 @@ def run_store(
         facts = [AtomicFact(
             fact_id=uuid.uuid4().hex[:16],
             content=content.strip(),
-            fact_type=FactType.SEMANTIC,
+            fact_type=requested_fact_type or FactType.SEMANTIC,
             entities=[],
             session_id=session_id,
             observation_date=parsed_date,
@@ -634,7 +637,10 @@ def run_store(
     if not facts:
         return []
 
-    if type_router:
+    if requested_fact_type:
+        for fact in facts:
+            fact.fact_type = requested_fact_type
+    elif type_router:
         facts = type_router.route_facts(facts)
 
     stored_ids: list[str] = []
