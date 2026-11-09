@@ -1830,6 +1830,54 @@ def edit_memory(request: Request, fact_id: str, caller_view: str = ""):
         return _routed_mutation_error(exc, profile, "Edit error")
 
 
+@router.patch("/api/memories/{fact_id}/fact-type")
+def edit_memory_fact_type(request: Request, fact_id: str, caller_view: str = ""):
+    """Reclassify one memory. The text is unchanged and no correction is opened.
+
+    A ``profile_id`` in the body names the profile the memory belongs to,
+    authorized like a routed remember; without it, the active profile.
+
+    ``caller_view`` is set when a remote app asks: a memory its recall would
+    hide is answered like an id that does not exist.
+    """
+    profile = None
+    try:
+        body = _on_loop(request.json) or {}
+        from superlocalmemory.storage.models import parse_fact_type
+
+        parsed = parse_fact_type(body.get("fact_type"), allow_empty=False)
+        profile = _routed_profile(body.get("profile_id"))
+        engine, target_profile, hook_context = _authorize_memory_mutation(
+            request,
+            "update",
+            fact_id,
+            content_preview=f"fact_type={parsed.value}",
+            run_pre_hook=False,
+            profile=profile,
+        )
+        _refuse_if_hidden(caller_view, engine, target_profile, [fact_id], "Memory not found")
+        from superlocalmemory.core.mutations import update_fact_type_authorized
+        result = update_fact_type_authorized(
+            engine,
+            fact_id,
+            parsed.value,
+            trusted_actor_id=hook_context["agent_id"],
+            source_agent_id="dashboard",
+            canonical_runtime=_canonical_mutation_runtime(request),
+            idempotency_key=_mutation_idempotency_key(request),
+            profile_id=target_profile,
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail="Memory not found")
+        return {"success": True, **result}
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        return _routed_mutation_error(exc, profile, "Fact type edit error")
+
+
 @router.post("/api/corrections/{case_id}/{action}")
 def review_correction(request: Request, case_id: str, action: str, caller_view: str = ""):
     """Apply, reject, or roll back a correction case.

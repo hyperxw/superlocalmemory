@@ -42,6 +42,7 @@ def test_memory_mutation_routes_require_authenticated_actor() -> None:
         "forget_memory",
         "merge_memory",
         "edit_memory",
+        "edit_memory_fact_type",
     ):
         start = source.index(f"def {function_name}(")  # sync or async route
         next_route = source.find("\n@router.", start + 1)

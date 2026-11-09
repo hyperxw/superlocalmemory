@@ -700,6 +700,15 @@ def run_store(
     if not facts:
         return []
 
+    from superlocalmemory.storage.models import parse_fact_type
+
+    requested_type = parse_fact_type((metadata or {}).get("fact_type"))
+    if requested_type is not None:
+        # Cover the queryable fact and every derived fact this save persists.
+        # assign_kinds below still lets a confirmed kind replace this choice.
+        for fact in facts:
+            fact.fact_type = requested_type
+
     # The extractor already classified every derived fact. Reclassifying here
     # made one extra LLM call (or embedding call) per fact without new evidence.
 

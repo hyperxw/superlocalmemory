@@ -1,6 +1,6 @@
 ---
 name: slm-getting-started-bot
-description: First-session orientation for SuperLocalMemory on a headless bot host (Grok Bot, or any Cursor-format plugin install with no hooks, no dashboard, and no interactive setup wizard). What is different here vs. Claude Code/Codex, which 19 tools are actually available, and the first three calls to make.
+description: First-session orientation for SuperLocalMemory on a headless bot host (Grok Bot, or any Cursor-format plugin install with no hooks, no dashboard, and no interactive setup wizard). What is different here vs. Claude Code/Codex, which 20 tools are actually available, and the first three calls to make.
 when_to_use: |
   - The very first session after SLM is installed as a Grok Bot / Cursor plugin
   - "What can I do with SuperLocalMemory here?"
@@ -44,13 +44,13 @@ format in the first place.
 
 ---
 
-## What IS available: the core profile (19 tools)
+## What IS available: the core profile (20 tools)
 
 This plugin sets `SLM_MCP_PROFILE=core`, the smallest tool tier, on purpose —
 a shared, memory-tight computer should not load tool descriptions or RAM for
-tiers it will not use. The 19 tools:
+tiers it will not use. The 20 tools:
 
-`remember`, `recall`, `search`, `fetch`, `expand`, `list_recent`, `update_memory`,
+`remember`, `recall`, `search`, `fetch`, `expand`, `list_recent`, `update_memory`, `update_fact_type`,
 `forget`, `session_init`, `close_session`, `slm_compress`, `slm_retrieve`,
 `slm_cache_set`, `slm_cache_get`, `slm_optimize_stats`, `review_correction`,
 `list_corrections`, `get_memory_summary`, `switch_profile`.

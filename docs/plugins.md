@@ -281,11 +281,11 @@ Codex, Antigravity, Hermes, Grok CLI, Muse CLI, the VS Code extension and every
 
 | Set | Tools | When to pick it |
 |---|---:|---|
-| `core` | 19 | A host with a small tool limit, or a bot that only needs remember and recall |
-| `full` | 58 | The default: everything most people use, including SLM-Mesh |
-| `power` | 70 | Adds governance: audit trail, retention, lifecycle, diagnostics |
-| `code` | 39 | Adds the code graph but leaves out the mesh |
-| `whole` | 110 | Every tool; only for hosts with no tool limit |
+| `core` | 20 | A host with a small tool limit, or a bot that only needs remember and recall |
+| `full` | 59 | The default: everything most people use, including SLM-Mesh |
+| `power` | 71 | Adds governance: audit trail, retention, lifecycle, diagnostics |
+| `code` | 40 | Adds the code graph but leaves out the mesh |
+| `whole` | 111 | Every tool; only for hosts with no tool limit |
 
 Some hosts limit the total number of MCP tools across all your servers, often
 to about 100, so a bigger set can push another server's tools out. To give one

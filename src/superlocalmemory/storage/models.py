@@ -57,6 +57,31 @@ class FactType(str, Enum):
         return None
 
 
+def parse_fact_type(value: object, *, allow_empty: bool = True) -> FactType | None:
+    """Return a caller-selected fact type, or None when the caller left it unset.
+
+    Empty means "keep the default classification". Any other value must be one
+    of the four fact types. The legacy spelling ``temporal`` reads as
+    ``prospective``, the same way :class:`FactType` itself does. Memory kinds
+    such as ``rule`` are not fact types; those belong to the kind tools.
+    """
+    if value is None:
+        text = ""
+    else:
+        text = str(value).strip().lower()
+    if not text:
+        if allow_empty:
+            return None
+        raise ValueError("invalid fact_type: missing")
+    try:
+        return FactType(text)
+    except ValueError as exc:
+        raise ValueError(
+            f"invalid fact_type: {text!r} "
+            "(expected episodic, semantic, opinion, or prospective)"
+        ) from exc
+
+
 class EdgeType(str, Enum):
     """Knowledge graph edge types."""
 

@@ -17,8 +17,9 @@ from __future__ import annotations
 # Named profile definitions (introduced in v3.6.14)
 # ---------------------------------------------------------------------------
 
-_PROFILE_CORE: frozenset[str] = frozenset({  # 18
-    "remember", "recall", "search", "fetch", "expand", "list_recent", "update_memory", "forget",
+_PROFILE_CORE: frozenset[str] = frozenset({  # 20
+    "remember", "recall", "search", "fetch", "expand", "list_recent", "update_memory",
+    "update_fact_type", "forget",
     "session_init", "close_session",
     "slm_compress", "slm_retrieve", "slm_cache_set", "slm_cache_get", "slm_optimize_stats",
     # A client that can propose a correction must be able to inspect and
@@ -56,7 +57,7 @@ _PROFILE_KINDS: frozenset[str] = frozenset({
     "confirm_memory_kinds",
 })
 
-_PROFILE_CODE: frozenset[str] = _PROFILE_CORE | _PROFILE_BRAIN | _PROFILE_KINDS | frozenset({  # 38
+_PROFILE_CODE: frozenset[str] = _PROFILE_CORE | _PROFILE_BRAIN | _PROFILE_KINDS | frozenset({  # 40
     "build_code_graph", "get_blast_radius", "query_graph",
     "semantic_search_code", "get_review_context", "detect_changes",
     # switch_profile lets a plugin/IDE session change the active workspace
@@ -101,7 +102,7 @@ def _media_tools_if_enabled() -> frozenset[str]:
 # 42 base — explicit literal, not runtime _ESSENTIAL_TOOLS (OQ-2).
 _PROFILE_FULL: frozenset[str] = frozenset({
     "remember", "recall", "search", "fetch", "expand", "list_recent", "delete_memory",
-    "update_memory",
+    "update_memory", "update_fact_type",
     "get_status", "session_init", "observe", "close_session", "report_feedback", "forget",
     "run_maintenance", "consolidate_cognitive", "get_soft_prompts", "set_mode", "report_outcome",
     "log_tool_event", "get_assertions", "reinforce_assertion", "contradict_assertion",
@@ -119,9 +120,9 @@ _PROFILE_FULL: frozenset[str] = frozenset({
     # and a view is a convenience over recall, which core already has.
     "run_view", "manage_view",
     # prestage_context remains registered but deliberately raw-server-only.
-}) | _PROFILE_FULL_MESH | _PROFILE_KINDS | _media_tools_if_enabled()  # 58 (+5 while images are on)
+}) | _PROFILE_FULL_MESH | _PROFILE_KINDS | _media_tools_if_enabled()  # 59 (+5 while images are on)
 
-_PROFILE_POWER: frozenset[str] = _PROFILE_FULL | frozenset({  # 70 (+5 while images are on)
+_PROFILE_POWER: frozenset[str] = _PROFILE_FULL | frozenset({  # 71 (+5 while images are on)
     "get_version", "get_mode", "health", "consistency_check", "recall_trace",
     "get_lifecycle_status", "set_retention_policy", "compact_memories",
     "get_behavioral_patterns", "audit_trail", "quantize", "get_retention_stats",
@@ -147,6 +148,7 @@ _PROFILE_DEFINITIONS: dict[str, frozenset[str]] = {
 _PROFILE_ALIASES: dict[str, str] = {
     "core14": "core",
     "core16": "core",
+    "core20": "core",
     # 3.8.0 and later additions grew code/full/power; every historical count
     # power. Every historical count-suffixed name is kept so a v3.6/3.7/early-
     # 3.8 config still resolves (back-compat); new 3.8.0 counts added alongside.
@@ -157,6 +159,7 @@ _PROFILE_ALIASES: dict[str, str] = {
     "code29": "code",
     "code31": "code",
     "code34": "code",
+    "code40": "code",
     "full38": "full",
     "full39": "full",
     "full42": "full",
@@ -164,18 +167,21 @@ _PROFILE_ALIASES: dict[str, str] = {
     "full47": "full",
     "full49": "full",
     "full50": "full",
+    "full59": "full",
     "power50": "power",
     "power51": "power",
     "power54": "power",
     "power58": "power",
     "power59": "power",
     "power61": "power",
+    "power71": "power",
     "mesh8": "mesh",
     "whole81": "whole",
     "whole84": "whole",
     "whole91": "whole",
     "whole92": "whole",
     "whole94": "whole",
+    "whole111": "whole",
 }
 
 # Plain-English descriptions for UI display.

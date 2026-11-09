@@ -79,6 +79,7 @@ _REQUIRED_MCP_GATES: frozenset[str] = frozenset({
     "remember",
     "delete_memory",
     "update_memory",
+    "update_fact_type",
     "correct_pattern",
     "switch_profile",
     "build_graph",

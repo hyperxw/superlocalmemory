@@ -5508,6 +5508,17 @@ def _register_daemon_routes(application: FastAPI) -> None:
                 from superlocalmemory.server.kind_error import invalid_kind_http
                 raise invalid_kind_http(InvalidKind(req.kind))
 
+        # Same door for a caller-selected fact type: reject it before anything
+        # is journaled. Empty leaves the default classification alone.
+        raw_meta = getattr(req, "metadata", None)
+        if isinstance(raw_meta, dict) and str(raw_meta.get("fact_type") or "").strip():
+            from superlocalmemory.storage.models import parse_fact_type
+
+            try:
+                parse_fact_type(raw_meta.get("fact_type"), allow_empty=False)
+            except ValueError as exc:
+                raise HTTPException(422, detail=str(exc)) from exc
+
         # Same for ``replaces``: refused here, before the try below would turn
         # the 422 into a 500, and before anything is journaled or saved.
         replaces_id = None

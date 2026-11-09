@@ -277,6 +277,16 @@ def build_immediate_admission_handler(
                 observation_date=observation_date, created_at=now,
             )
 
+        # A caller-selected classification is applied before kind assignment.
+        # A confirmed kind still overwrites fact_type (I2); a prebuilt fact
+        # already carries the type its payload chose.
+        if not isinstance(prebuilt_payload, dict):
+            from superlocalmemory.storage.models import parse_fact_type
+
+            requested = parse_fact_type(metadata.get("fact_type"))
+            if requested is not None:
+                fact.fact_type = requested
+
         from superlocalmemory.core.kind_assignment import assign_kinds, store_fact_keeping_kind
         from superlocalmemory.encoding.non_answer import is_stub, mark
 

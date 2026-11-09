@@ -298,6 +298,33 @@ def _handle_update_memory(
     }
 
 
+def _handle_update_fact_type(
+    fact_id: str,
+    fact_type: str,
+    source_agent_id: str = "system",
+) -> dict:
+    """Reclassify a fact. Unlike a content correction, this is not review-gated.
+
+    The worker has no canonical writer, so the change is the direct,
+    profile-scoped update. When the daemon is up, MCP never reaches this
+    command: it goes through the daemon's single writer instead.
+    """
+    engine = _get_engine()
+    from superlocalmemory.core.engine_ingestion import local_trusted_actor_id
+    from superlocalmemory.core.mutations import update_fact_type_authorized
+
+    try:
+        return update_fact_type_authorized(
+            engine,
+            fact_id,
+            fact_type,
+            trusted_actor_id=local_trusted_actor_id("recall-worker"),
+            source_agent_id=source_agent_id,
+        )
+    except ValueError as exc:
+        return {"ok": False, "retryable": False, "error": str(exc), "fact_id": fact_id}
+
+
 def _handle_summarize(texts: list[str], mode: str) -> dict:
     """Generate summary using heuristic (A) or LLM (B/C)."""
     from superlocalmemory.core.summarizer import Summarizer
@@ -399,6 +426,13 @@ def _worker_main() -> None:
                 result = _handle_update_memory(
                     req.get("fact_id", ""),
                     req.get("content", ""),
+                    req.get("source_agent_id", req.get("agent_id", "system")),
+                )
+                _respond(result)
+            elif cmd == "update_fact_type":
+                result = _handle_update_fact_type(
+                    req.get("fact_id", ""),
+                    req.get("fact_type", ""),
                     req.get("source_agent_id", req.get("agent_id", "system")),
                 )
                 _respond(result)

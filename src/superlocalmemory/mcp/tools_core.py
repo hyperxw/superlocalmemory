@@ -178,6 +178,7 @@ def register_core_tools(server, get_engine: Callable) -> None:
         kind: str = "",
         replaces: str | None = None,
         speaker: str = "",
+        fact_type: str = "",
     ) -> dict:
         """Store content to memory with intelligent indexing.
 
@@ -224,7 +225,19 @@ def register_core_tools(server, get_engine: Callable) -> None:
         and they mean you, the calling agent. Pass ``"user"`` when you are
         saving the user's own words verbatim ("I prefer dark mode"), or a name
         when you are recording what someone else said.
+
+        ``fact_type`` classifies the memory as ``episodic``, ``semantic``,
+        ``opinion`` or ``prospective`` (``temporal`` is the old name for
+        prospective). Leave it empty to keep the default. This is the
+        four-way fact type, not the nine memory kinds — use ``kind`` for
+        those. When both are set, the declared kind wins.
         """
+        from superlocalmemory.storage.models import parse_fact_type
+
+        try:
+            requested_type = parse_fact_type(fact_type)
+        except ValueError as exc:
+            return {"success": False, "retryable": False, "error": str(exc)}
         # v3.6.10: resolve "mcp_client" sentinel → URL path (HTTP) or env var (stdio)
         if agent_id == "mcp_client":
             from superlocalmemory.mcp.agent_context import get_current_agent_id
@@ -256,6 +269,11 @@ def register_core_tools(server, get_engine: Callable) -> None:
             "agent_id": agent_id,
             "session_id": session_id,
         }
+        if requested_type is not None:
+            # Ordinary metadata, not a reserved key: the daemon keeps it and
+            # the ingestion path stamps it onto the stored facts. Absent when
+            # unset, so a plain remember stays byte-identical.
+            meta["fact_type"] = requested_type.value
         # Sent as the request's own ``kind`` field, never inside metadata (the
         # daemon strips reserved keys there): see mcp/_remember_kind.py.
         from superlocalmemory.mcp import _remember_kind as rk
@@ -288,6 +306,10 @@ def register_core_tools(server, get_engine: Callable) -> None:
             # so every key derived for a plain call is unchanged.
             replaces_part = (f"\0replaces={replaces_id}" if replaces_id is not None else ""
                              ) + rk.kind_key_part(declared_kind)  # so is the kind
+            if requested_type is not None:
+                # Same rule: only a call that actually names a type changes
+                # the key derived for it.
+                replaces_part += f"\0fact_type={requested_type.value}"
             if session_id:
                 material = (
                     f"{agent_id}\0{session_id}\0{scope or ''}\0{shared_with}\0{content}"
@@ -1646,6 +1668,96 @@ def register_core_tools(server, get_engine: Callable) -> None:
             return {"success": False, "error": result.get("error", "Update failed")}
         except Exception as exc:
             logger.exception("update_memory failed")
+            return {"success": False, "error": str(exc)}
+
+    @server.tool(title="Update Fact Type", annotations=SETS)
+    @admits(OperationKind.CORRECT)
+    async def update_fact_type(
+        fact_id: str, fact_type: str, agent_id: str = "mcp_client",
+        profile_id: str = "",
+    ) -> dict:
+        """Change how an existing memory is classified, without rewriting its text.
+
+        ``fact_type`` is ``episodic``, ``semantic``, ``opinion`` or
+        ``prospective`` (``temporal`` is accepted as prospective). This is not
+        a memory kind: a kind such as ``rule`` or ``decision`` is set with
+        ``set_memory_kind``. The four names that are both a fact type and a
+        kind are stored as that kind, so the two stay in step.
+
+        The fact must belong to ``profile_id``, or the active profile when
+        that is empty. The active profile is not moved. Setting the same type
+        again leaves the memory as it is.
+
+        Args:
+            fact_id: Exact fact ID to reclassify.
+            fact_type: The classification to store.
+            agent_id: Identifier of the calling agent (logged for audit).
+        """
+        from superlocalmemory.storage.models import parse_fact_type
+
+        try:
+            parsed = parse_fact_type(fact_type, allow_empty=False)
+        except ValueError as exc:
+            return {"success": False, "retryable": False, "error": str(exc)}
+        if agent_id == "mcp_client":
+            from superlocalmemory.mcp.agent_context import get_current_agent_id
+            agent_id = get_current_agent_id()
+        try:
+            import asyncio
+            import urllib.parse
+
+            from superlocalmemory.cli.daemon import is_daemon_running
+            from superlocalmemory.mcp.request_profile import (
+                requested_profile,
+                routing_needs_daemon_error,
+            )
+
+            named = requested_profile(profile_id)
+            if await asyncio.to_thread(is_daemon_running):
+                from superlocalmemory.mcp.remote_visibility import with_view
+
+                path = with_view(
+                    "/api/memories/" + urllib.parse.quote(fact_id, safe="") + "/fact-type"
+                )
+                body = {
+                    "fact_type": parsed.value,
+                    **({"profile_id": named} if named else {}),
+                }
+                result = await asyncio.to_thread(_routed_daemon_call, "PATCH", path, body)
+                if isinstance(result, dict) and result.get("code"):
+                    return result
+                if isinstance(result, dict) and result.get("success"):
+                    return {
+                        "success": True,
+                        "fact_id": result.get("fact_id", fact_id),
+                        "old_fact_type": result.get("old_fact_type"),
+                        "fact_type": result.get("fact_type", parsed.value),
+                    }
+                return {
+                    "success": False,
+                    "retryable": True,
+                    "error": "resident daemon rejected the fact type update",
+                }
+            if named:
+                return routing_needs_daemon_error()
+
+            from superlocalmemory.core.worker_pool import WorkerPool
+            pool = WorkerPool.shared()
+            result = pool.update_fact_type(fact_id, parsed.value, agent_id)
+            if result.get("ok"):
+                logger.info(
+                    "Fact type updated: %s -> %s by agent: %s",
+                    fact_id[:16], parsed.value, agent_id,
+                )
+                return {
+                    "success": True,
+                    "fact_id": result.get("fact_id", fact_id),
+                    "old_fact_type": result.get("old_fact_type"),
+                    "fact_type": result.get("fact_type", parsed.value),
+                }
+            return {"success": False, "error": result.get("error", "Fact type update failed")}
+        except Exception as exc:
+            logger.exception("update_fact_type failed")
             return {"success": False, "error": str(exc)}
 
     @server.tool(title="Review Correction", annotations=DESTROYS_ONCE)

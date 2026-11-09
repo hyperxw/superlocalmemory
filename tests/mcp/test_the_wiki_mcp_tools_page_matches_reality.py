@@ -21,7 +21,7 @@ WIKI_PAGE = REPO_ROOT / "wiki-content" / "MCP-Tools.md"
 # tools). Pinned by tests/test_mcp/test_mcp_exposure_contract.py
 # (`test_registration_exposure_is_exact_and_duplicate_free`, exposure
 # "whole", expected_count 109).
-_WHOLE_TOOLS_COUNT = 110  # 4.1.25: + expand
+_WHOLE_TOOLS_COUNT = 111  # manual fact type, on top of expand
 
 
 def _real_count(name: str) -> int:

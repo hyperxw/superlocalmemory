@@ -769,6 +769,103 @@ def update_fact_authorized(
     }
 
 
+def _fact_type_updates(engine: Any, parsed: Any) -> dict[str, Any]:
+    """Columns for a fact-type change that keeps kind and fact_type together.
+
+    A fact-type-only ``UPDATE`` would leave a confirmed kind pointing at the
+    old type. When the kind columns exist, record the same choice as the
+    user's kind so a later suggestion cannot put the old type back. A database
+    stand-in that does not answer ``True`` stays on ``fact_type`` alone.
+    """
+    updates: dict[str, Any] = {"fact_type": parsed.value}
+    checker = getattr(getattr(engine, "_db", None), "has_memory_kind_columns", None)
+    if not callable(checker) or checker() is not True:
+        return updates
+    from datetime import UTC, datetime
+
+    from superlocalmemory.storage.memory_kinds import KindSource
+
+    updates.update({
+        "memory_kind": parsed.value,
+        "memory_kind_source": KindSource.USER.value,
+        "memory_kind_confidence": None,
+        "memory_kind_recipe": None,
+        "memory_kind_at": datetime.now(UTC).isoformat(),
+    })
+    return updates
+
+
+def update_fact_type_authorized(
+    engine: Any,
+    fact_id: str,
+    fact_type: str,
+    *,
+    trusted_actor_id: str,
+    source_agent_id: str,
+    canonical_runtime: Any | None = None,
+    idempotency_key: str | None = None,
+    profile_id: str | None = None,
+) -> dict[str, Any]:
+    """Reclassify one fact in place. Content and history stay as they are.
+
+    ``profile_id`` is the profile the fact belongs to; ``None`` is the active
+    one. The four fact types share their names with memory kinds, so a live
+    canonical writer records the change as the user's kind (and the matching
+    ``fact_type``). That writer refuses a content-less update, which is why
+    this does not go through :func:`update_fact_authorized`. With no writer
+    (the offline worker), the same columns are updated directly.
+    """
+    from superlocalmemory.storage.models import parse_fact_type
+
+    parsed = parse_fact_type(fact_type, allow_empty=False)
+    profile_id, context = _context(
+        engine,
+        "update",
+        fact_id,
+        trusted_actor_id=trusted_actor_id,
+        source_agent_id=source_agent_id,
+        content_preview=f"fact_type={parsed.value}",
+        profile_id=profile_id,
+    )
+    rows = engine._db.execute(
+        "SELECT fact_type FROM atomic_facts "
+        "WHERE fact_id = ? AND profile_id = ? LIMIT 1",
+        (fact_id, profile_id),
+    )
+    if not rows:
+        return {"ok": False, "error": f"Memory {fact_id} not found"}
+    old_fact_type = str(dict(rows[0]).get("fact_type") or "")
+
+    applied = False
+    if canonical_runtime is not None:
+        receipt = dict(canonical_runtime.set_fact_kinds(
+            profile_id,
+            [(fact_id, parsed.value)],
+            idempotency_key=idempotency_key,
+        ))
+        written = list(receipt.get("facts") or [])
+        if written and written[0].get("ok"):
+            applied = True
+        elif written:
+            return {"ok": False, "error": f"Memory {fact_id} not found"}
+    if not applied:
+        engine._db.update_fact(
+            fact_id, _fact_type_updates(engine, parsed), profile_id=profile_id,
+        )
+
+    engine._hooks.run_post("update", context)
+    logger.info(
+        "FACT_TYPE fact_id=%s old=%s new=%s actor=%s source_agent=%s",
+        fact_id[:16], old_fact_type, parsed.value, trusted_actor_id, source_agent_id,
+    )
+    return {
+        "ok": True,
+        "fact_id": fact_id,
+        "old_fact_type": old_fact_type,
+        "fact_type": parsed.value,
+    }
+
+
 def index_applied_successor(engine: Any, profile_id: str, successor_fact_id: str) -> bool:
     """Make an applied correction findable by meaning; True when it is.
 
@@ -799,4 +896,5 @@ def index_applied_successor(engine: Any, profile_id: str, successor_fact_id: str
 
 
 __all__ = ["delete_fact_authorized", "index_applied_successor",
-           "purge_profile_context_cache", "update_fact_authorized"]
+           "purge_profile_context_cache", "update_fact_authorized",
+           "update_fact_type_authorized"]

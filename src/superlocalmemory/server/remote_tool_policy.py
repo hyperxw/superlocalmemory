@@ -59,7 +59,7 @@ WRITE_ONLY_TOOLS: frozenset[str] = frozenset({
     "observe", "record_agent_experience", "record_cognitive_turn",
     "reinforce_assertion", "remember", "report_feedback", "report_outcome",
     "review_correction", "session_init", "set_memory_kind", "settle_session_outcomes",
-    "slm_cache_set", "slm_compress", "update_memory",
+    "slm_cache_set", "slm_compress", "update_fact_type", "update_memory",
 })
 
 WRITE_TOOLS: frozenset[str] = READ_TOOLS | WRITE_ONLY_TOOLS

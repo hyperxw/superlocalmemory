@@ -64,7 +64,7 @@ class TestToolRegistration:
         )
         # Verify key tools are present
         for name in ("remember", "recall", "search", "fetch", "get_status",
-                     "get_attribution", "list_recent"):
+                     "get_attribution", "list_recent", "update_fact_type"):
             assert name in srv._tools, f"Missing core tool: {name}"
 
     def test_active_tools_registers_expected_count(self):

@@ -119,13 +119,12 @@ def reset_engine():
 
 # Register tools and resources -------------------------------------------------
 #
-# Essential-only default: 48 base tools + 9 mesh tools = 57 registered
-# when mesh is enabled. Set ``SLM_MCP_ALL_TOOLS=1`` to expose the full
-# toolset. Rationale: IDEs cap at 50-100 tools total (Cursor,
-# Antigravity, Windsurf) and a maximal SLM registration crowds out
-# other MCP servers the user may have installed.
-# Admin/diagnostics tools remain available via CLI (`slm <command>`).
-# Set SLM_MCP_ALL_TOOLS=1 to enable all 107 tools (power users).
+# Essential-only default: the full profile, 59 tools while images are off
+# (64 while they are on) and mesh is enabled. Set ``SLM_MCP_ALL_TOOLS=1``
+# to expose every registered tool (111 while images are off). Rationale:
+# IDEs cap at 50-100 tools total (Cursor, Antigravity, Windsurf) and a
+# maximal SLM registration crowds out other MCP servers the user may have
+# installed. Admin/diagnostics tools remain available via CLI (`slm <command>`).
 
 import os as _os_reg
 
@@ -139,6 +138,7 @@ _ESSENTIAL_TOOLS: set[str] = {
     "list_recent",
     "delete_memory",
     "update_memory",
+    "update_fact_type",
     "get_status",
     "switch_profile",
     # Session lifecycle (3)

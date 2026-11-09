@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-SuperLocalMemory exposes 110 tools and 7 resources through the Model Context
+SuperLocalMemory exposes 111 tools and 7 resources through the Model Context
 Protocol (MCP). A client sees only the tools its tool set allows (see
 [Which tools a client sees](#which-tools-a-client-sees)); the registered
 function signatures are the source of truth for names and parameters, and a
@@ -45,16 +45,16 @@ changes. The tool set is fixed when the MCP server starts.
 
 | `SLM_MCP_PROFILE` | Tools | What it adds |
 |---|---:|---|
-| `core` | 19 | remember, recall, search, fetch, expand, list_recent, update_memory, forget, session_init, close_session, the five optimize tools, review_correction, list_corrections, get_memory_summary, switch_profile |
-| `code` | 39 | `core` plus the code-graph tools build_code_graph, get_blast_radius, query_graph, semantic_search_code, get_review_context, detect_changes; Brain evidence; memory-kind tools; the three bounded-loop tools; report_outcome, report_feedback |
-| `full` | 58 | everyday memory, sessions, learning, skills, optimize, bounded loops, saved views, memory kinds, Brain evidence, and the 9 mesh tools |
-| `power` | 70 | `full` plus get_version, get_mode, health, consistency_check, recall_trace, get_lifecycle_status, set_retention_policy, compact_memories, get_behavioral_patterns, audit_trail, quantize, get_retention_stats |
+| `core` | 20 | remember, recall, search, fetch, expand, list_recent, update_memory, update_fact_type, forget, session_init, close_session, the five optimize tools, review_correction, list_corrections, get_memory_summary, switch_profile |
+| `code` | 40 | `core` plus the code-graph tools build_code_graph, get_blast_radius, query_graph, semantic_search_code, get_review_context, detect_changes; Brain evidence; memory-kind tools; the three bounded-loop tools; report_outcome, report_feedback |
+| `full` | 59 | everyday memory, sessions, learning, skills, optimize, bounded loops, saved views, memory kinds, Brain evidence, and the 9 mesh tools |
+| `power` | 71 | `full` plus get_version, get_mode, health, consistency_check, recall_trace, get_lifecycle_status, set_retention_policy, compact_memories, get_behavioral_patterns, audit_trail, quantize, get_retention_stats |
 | `mesh` | 9 | the mesh tools only |
-| `whole` | 110 | every registered tool |
+| `whole` | 111 | every registered tool |
 
-With no `SLM_MCP_PROFILE`, a client gets the same 58 tools as `full` (the mesh
+With no `SLM_MCP_PROFILE`, a client gets the same 59 tools as `full` (the mesh
 tools are included while mesh is enabled, which is the default).
-`SLM_MCP_ALL_TOOLS=1` exposes all 110. `SLM_MCP_TOOLS=name1,name2` exposes
+`SLM_MCP_ALL_TOOLS=1` exposes all 111. `SLM_MCP_TOOLS=name1,name2` exposes
 exactly the names listed. An unknown `SLM_MCP_PROFILE` value is an error, not a
 silent fallback.
 
@@ -86,6 +86,7 @@ result for retrieval.
 | `session_date` | string | No | When the memory is about, as `YYYY-MM-DD` or ISO 8601. Omitted means today |
 | `profile_id` | string | No | Write to this profile instead of the active one |
 | `kind` | string | No | One of the nine [memory kinds](memory-kinds.md). A declared kind is confirmed; leave it empty when unsure |
+| `fact_type` | string | No | `episodic`, `semantic`, `opinion` or `prospective`. Empty keeps the default. A declared `kind` wins when both are set |
 | `replaces` | string | No | `fact_id` of an earlier memory this one replaces |
 
 The result is a receipt with `fact_ids`, `count`, `operation_id`,
@@ -222,6 +223,24 @@ with `review_correction`. See [Reviewed corrections](reviewed-corrections.md).
 
 Returns `predecessor_fact_id`, `successor_fact_id`, `correction_case` and
 `review_required`.
+
+### `update_fact_type`
+
+Reclassify one memory without changing its text or opening a correction.
+`fact_type` is the four-way classification, not a memory kind: use
+`set_memory_kind` for `rule`, `decision` and the other kinds. The four names
+that are both (`episodic`, `semantic`, `opinion`, `prospective`) are stored as
+that kind, so the two stay in step. `temporal` is accepted as `prospective`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fact_id` | string, required | Memory to reclassify |
+| `fact_type` | string, required | `episodic`, `semantic`, `opinion` or `prospective` |
+| `agent_id` | string | Calling agent, logged for audit |
+| `profile_id` | string | Profile the memory belongs to |
+
+Returns `fact_id`, `old_fact_type` and `fact_type`. Setting the same type
+again is safe.
 
 ### `review_correction`
 

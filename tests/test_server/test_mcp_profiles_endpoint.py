@@ -19,10 +19,10 @@ from superlocalmemory.server.unified_daemon import create_app
 _ENDPOINT = "/api/v3/mcp/profiles"
 
 _EXPECTED_COUNTS = {
-    "core": 19,   # v4.1.0: + switch_profile; 4.1.25: + expand (layered recall)
-    "code": 39,   # 4.1.19 WP8: + memory-kind management; 4.1.25: + expand
-    "full": 58,   # 4.1.21: + saved views; 4.1.25: + expand
-    "power": 70,  # + saved views and expand, via full
+    "core": 20,   # manual fact type, on top of switch_profile and expand
+    "code": 40,   # core, plus memory-kind management and expand
+    "full": 59,   # core's fact type, plus saved views and expand
+    "power": 71,  # full, plus governance tools
     "mesh": 9,
 }
 

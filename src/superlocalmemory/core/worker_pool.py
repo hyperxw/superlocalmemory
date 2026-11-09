@@ -146,6 +146,15 @@ class WorkerPool:
             "source_agent_id": agent_id,
         })
 
+    def update_fact_type(self, fact_id: str, fact_type: str, agent_id: str = "system") -> dict:
+        """Reclassify one fact; ``agent_id`` is untrusted audit metadata."""
+        return self._send({
+            "cmd": "update_fact_type",
+            "fact_id": fact_id,
+            "fact_type": fact_type,
+            "source_agent_id": agent_id,
+        })
+
     def get_memory_facts(self, memory_id: str) -> dict:
         """Get original memory text + child atomic facts."""
         return self._send({"cmd": "get_memory_facts", "memory_id": memory_id})

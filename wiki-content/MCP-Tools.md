@@ -1,6 +1,6 @@
 # MCP Tools
 
-SLM exposes 110 tools and 9 resources through the Model Context Protocol (MCP), but a client never sees all of them by default. A named tool profile (`core`, `code`, `full`, `power`, `mesh`, `whole`) picks a fixed subset when the MCP server starts, and an AI app on another computer or on the internet gets a smaller, default-deny subset again. This page lists every tool with its parameters, the profiles that include it and whether a remote caller may use it. The registered function signatures in `src/superlocalmemory/mcp/` are the source of truth, and the profile sets are computed from `mcp/profiles.py`.
+SLM exposes 111 tools and 9 resources through the Model Context Protocol (MCP), but a client never sees all of them by default. A named tool profile (`core`, `code`, `full`, `power`, `mesh`, `whole`) picks a fixed subset when the MCP server starts, and an AI app on another computer or on the internet gets a smaller, default-deny subset again. This page lists every tool with its parameters, the profiles that include it and whether a remote caller may use it. The registered function signatures in `src/superlocalmemory/mcp/` are the source of truth, and the profile sets are computed from `mcp/profiles.py`.
 
 ## Connecting
 
@@ -20,18 +20,18 @@ Every tool that reads or writes memory takes an optional `profile_id`. Empty mea
 
 ## Choosing which tools a client sees
 
-> Current profile counts: `core` **19**, `code` **39**, `full` **58**, `power` **70**, `mesh` **9**, `whole` **110**. While pictures and documents are on, `full` and `power` each gain five tools (63 and 75).
+> Current profile counts: `core` **20**, `code` **40**, `full` **59**, `power` **71**, `mesh` **9**, `whole` **111**. While pictures and documents are on, `full` and `power` each gain five tools (64 and 76).
 
 Three environment variables decide the surface, and the first one that applies wins: `SLM_MCP_ALL_TOOLS=1` exposes all 110, then `SLM_MCP_TOOLS=a,b,c` exposes exactly the names listed, then `SLM_MCP_PROFILE` picks a named profile, and with none of them set the default applies. The default is the same set as `full`. An unknown `SLM_MCP_PROFILE` value is an error, not a silent fallback. `slm connect IDE --profile NAME` writes the variable into an IDE's entry. The choice is fixed when the server starts. It has nothing to do with the memory profile that `switch_profile` changes.
 
 | `SLM_MCP_PROFILE` | Tools | What it holds |
 |---|---:|---|
-| `core` | **19** | remember, recall, search, fetch, expand, list_recent, update_memory, forget, session_init, close_session, the five Optimize tools, review_correction, list_corrections, get_memory_summary, switch_profile |
-| `code` | **39** | `core`, plus the five Brain tools, the four memory-kind tools, six code-graph tools (build_code_graph, get_blast_radius, query_graph, semantic_search_code, get_review_context, detect_changes), the three bounded-loop tools, report_outcome and report_feedback |
-| `full` | **58** | Everyday memory, sessions, learning, skills, Optimize, bounded loops, saved views, memory kinds, Brain tools and the nine mesh tools. This is also the default |
-| `power` | **70** | `full`, plus get_version, get_mode, health, consistency_check, recall_trace, get_lifecycle_status, set_retention_policy, compact_memories, get_behavioral_patterns, audit_trail, quantize, get_retention_stats |
+| `core` | **20** | remember, recall, search, fetch, expand, list_recent, update_memory, update_fact_type, forget, session_init, close_session, the five Optimize tools, review_correction, list_corrections, get_memory_summary, switch_profile |
+| `code` | **40** | `core`, plus the five Brain tools, the four memory-kind tools, six code-graph tools (build_code_graph, get_blast_radius, query_graph, semantic_search_code, get_review_context, detect_changes), the three bounded-loop tools, report_outcome and report_feedback |
+| `full` | **59** | Everyday memory, sessions, learning, skills, Optimize, bounded loops, saved views, memory kinds, Brain tools and the nine mesh tools. This is also the default |
+| `power` | **71** | `full`, plus get_version, get_mode, health, consistency_check, recall_trace, get_lifecycle_status, set_retention_policy, compact_memories, get_behavioral_patterns, audit_trail, quantize, get_retention_stats |
 | `mesh` | **9** | The nine `mesh_*` tools only |
-| `whole` | **110** | Every registered tool (the raw server) |
+| `whole` | **111** | Every registered tool (the raw server) |
 
 The five picture and document tools join `full` and `power` only while images and documents are turned on ([Pictures and Documents](Pictures-and-Documents)). That is read once when the server starts. The mesh tools join the default while mesh is enabled, which is the default (`SLM_MCP_MESH_TOOLS=1` forces them on). Old count-suffixed names such as `core14`, `code34`, `full50`, `power61`, `mesh8` and `whole94` still resolve to their current profile and log a deprecation warning.
 
@@ -54,6 +54,7 @@ In the tables, a parameter followed by `?` is optional. The Profiles column says
 | `expand` | `memory_id`, `depth`? (default 2), `max_tokens`?, `profile_id`? | Drill into one recall result: the full memory plus, at depth 2, its source memory, up to three memories from the same session, up to three about the same entities and the correction that replaced it. Takes a result's `fact_id` or `memory_id` and applies the same profile and visibility checks as `fetch`. `max_tokens` is never exceeded | core, code, full, power | refused |
 | `list_recent` | `limit`?, `kind`?, `profile_id`?, `tags`?, `tags_match`? | Most recent memories, newest first, with optional kind and tag filters | core, code, full, power | read |
 | `update_memory` | `fact_id`, `content`, `agent_id`?, `profile_id`? | Replace the text of one memory by exact fact id | core, code, full, power | write |
+| `update_fact_type` | `fact_id`, `fact_type`, `agent_id`?, `profile_id`? | Reclassify one memory as episodic, semantic, opinion or prospective without changing its text | core, code, full, power | write |
 | `delete_memory` | `fact_id`, `agent_id`?, `profile_id`? | Delete one memory by exact fact id | full, power | write |
 | `review_correction` | `case_id`, `action`, `expected_version`, `event_valid_until`?, `profile_id`? | Apply, reject or roll back a review-gated correction case; `expected_version` guards against stale reviews | core, code, full, power | write |
 | `list_corrections` | `limit`?, `profile_id`? | List correction cases for a human or host reviewer | core, code, full, power | read |
@@ -240,7 +241,7 @@ A remote caller is an AI tool on another computer using a key from `slm remote k
 | Class | Tools |
 |---|---|
 | Read (any remote key) | fetch, get_assertions, get_attribution, get_behavioral_patterns, get_brain_evidence_status, get_learned_patterns, get_lifecycle_status, get_memory_summary, get_mode, get_retention_stats, get_soft_prompts, get_status, get_version, health, list_corrections, list_recent, memory_kinds_status, memory_used, prestage_context, recall, recall_trace, review_memory_kinds, run_view, search, skill_health, skill_lineage, slm_cache_get, slm_loop_history, slm_loop_show, slm_optimize_stats, slm_retrieve |
-| Write (a key that is not read-only, in addition to the read tools) | close_session, confirm_memory_kinds, contradict_assertion, core_memory, correct_pattern, delete_memory, finalize_cognitive_turn, log_tool_event, manage_view, observe, record_agent_experience, record_cognitive_turn, reinforce_assertion, remember, report_feedback, report_outcome, review_correction, session_init, set_memory_kind, settle_session_outcomes, slm_cache_set, slm_compress, update_memory |
+| Write (a key that is not read-only, in addition to the read tools) | close_session, confirm_memory_kinds, contradict_assertion, core_memory, correct_pattern, delete_memory, finalize_cognitive_turn, log_tool_event, manage_view, observe, record_agent_experience, record_cognitive_turn, reinforce_assertion, remember, report_feedback, report_outcome, review_correction, session_init, set_memory_kind, settle_session_outcomes, slm_cache_set, slm_compress, update_fact_type, update_memory |
 | Mesh (opt-in) | mesh_peers, mesh_send, mesh_inbox, mesh_wait, mesh_state. Needs the grant's mesh scope and `slm remote keys allow KEY mesh` |
 | Media (opt-in) | remember_media, get_media, remember_document, media_status, media_upload_link. Needs the grant's media scope and `slm remote keys allow KEY media`; saving also needs the write scope |
 | Host only | The 45 tools classified as host-only: switching profile, maintenance, retention, decay, `forget`, the code graph, `slm_loop_run`, `mesh_lock`, `mesh_events`, `mesh_status`, `mesh_summary`, set_mode and the rest of that set. `expand` is not in it |
